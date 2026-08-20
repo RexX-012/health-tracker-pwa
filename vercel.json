@@ -1,0 +1,24 @@
+{
+  "rewrites": [
+    {
+      "source": "/health",
+      "destination": "/api/health"
+    },
+    {
+      "source": "/ai-usage",
+      "destination": "/api/ai-usage"
+    },
+    {
+      "source": "/analyze-food",
+      "destination": "/api/analyze-food"
+    },
+    {
+      "source": "/settings",
+      "destination": "/api/settings"
+    },
+    {
+      "source": "/daily-record",
+      "destination": "/api/daily-record"
+    }
+  ]
+}

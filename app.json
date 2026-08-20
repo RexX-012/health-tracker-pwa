@@ -6,6 +6,17 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Health Tracker to access your photos so you can select a food image.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-secure-store",
+      "expo-notifications"
+    ],
     "ios": {
       "supportsTablet": true
     },
@@ -19,7 +30,8 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "output": "single"
     }
   }
 }
