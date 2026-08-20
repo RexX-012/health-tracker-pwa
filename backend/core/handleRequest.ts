@@ -26,10 +26,22 @@ const MAX_DESCRIPTION_LENGTH = 2_000;
 const MAX_IMAGE_BASE64_LENGTH = 6_000_000;
 const PERSONAL_ACCESS_TOKEN_HEADER = 'X-Health-Tracker-Access-Token';
 const IDEMPOTENCY_KEY_HEADER = 'Idempotency-Key';
+const PWA_ORIGIN = 'https://health-tracker-pwa.sthaaraman.workers.dev';
 
 export async function handleRequest(
   request: Request,
   environment: BackendEnvironment = {},
+): Promise<Response> {
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders(request), status: 204 });
+  }
+
+  return withCors(request, await handleRequestInternal(request, environment));
+}
+
+async function handleRequestInternal(
+  request: Request,
+  environment: BackendEnvironment,
 ): Promise<Response> {
   const url = new URL(request.url);
 
@@ -378,5 +390,33 @@ function json(body: unknown, status = 200, headers: HeadersInit = {}) {
       ...headers,
     },
     status,
+  });
+}
+
+function corsHeaders(request: Request): HeadersInit {
+  if (request.headers.get('Origin') !== PWA_ORIGIN) {
+    return {};
+  }
+
+  return {
+    'Access-Control-Allow-Headers': 'Content-Type, Idempotency-Key, X-Health-Tracker-Access-Token',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+    'Access-Control-Allow-Origin': PWA_ORIGIN,
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin',
+  };
+}
+
+function withCors(request: Request, response: Response): Response {
+  const headers = new Headers(response.headers);
+  const accessHeaders = corsHeaders(request);
+  for (const [name, value] of Object.entries(accessHeaders)) {
+    headers.set(name, value);
+  }
+
+  return new Response(response.body, {
+    headers,
+    status: response.status,
+    statusText: response.statusText,
   });
 }
