@@ -694,6 +694,9 @@ export default function App() {
       setAiAnalysis(null);
       setAiAnalysisStatus('');
       setSavedFoodEntryId(null);
+      if (foodInputMode === 'photo') {
+        setFoodDescription('');
+      }
       setFoodImage({ base64: asset.base64, mediaType: asset.mimeType ?? 'image/jpeg', uri: asset.uri });
     }
   };
@@ -711,6 +714,9 @@ export default function App() {
     setAiAnalysis(null);
     setAiAnalysisStatus('');
     setSavedFoodEntryId(null);
+    setFoodDescription('');
+    setFoodImage(null);
+    setSpiceLevel(0);
     setFoodInputMode(mode);
   };
 
@@ -801,7 +807,7 @@ export default function App() {
     try {
       const response = await requestWithFailover<FoodAnalysisResponse>('/analyze-food', {
         body: {
-          description: foodDescription.trim() || undefined,
+          description: foodInputMode === 'text' ? foodDescription.trim() || undefined : undefined,
           image: foodImage ? { base64: foodImage.base64, mediaType: foodImage.mediaType } : undefined,
         },
         headers: { 'X-Health-Tracker-Access-Token': accessToken },

@@ -15,6 +15,7 @@ type ServiceAccountCredentials = {
 };
 
 type UsageRow = {
+  createdAt?: string;
   date: string;
   idempotencyKey: string;
   result?: string;
@@ -49,7 +50,7 @@ export class GoogleSheetsUsageError extends Error {
 export class GoogleSheetsUsageStore {
   async getDailyUsage(environment: BackendEnvironment, date = getSydneyDate()): Promise<DailyAiUsage> {
     const rows = await this.getUsageRows(environment);
-    const used = countCompletedAnalyses(rows, date);
+    const used = countCompletedAnalyses(rows, date, getActiveUsageResetAt(environment, date));
     return buildDailyUsage(used);
   }
 
@@ -60,7 +61,7 @@ export class GoogleSheetsUsageStore {
   ): Promise<AiUsageReservation> {
     const rows = await this.getUsageRows(environment);
     const alreadyRecorded = rows.find((row) => row.idempotencyKey === idempotencyKey);
-    const used = countCompletedAnalyses(rows, date);
+    const used = countCompletedAnalyses(rows, date, getActiveUsageResetAt(environment, date));
 
     if (alreadyRecorded) {
       if (alreadyRecorded.status === 'completed' && alreadyRecorded.result) {
@@ -123,9 +124,10 @@ export class GoogleSheetsUsageStore {
 
     const payload = (await response.json()) as { values?: unknown[][] };
     return (payload.values ?? []).reduce<UsageRow[]>((rows, value, index) => {
-      const [date, idempotencyKey, , status, result] = value;
+      const [date, idempotencyKey, createdAt, status, result] = value;
       if (typeof date === 'string' && typeof idempotencyKey === 'string') {
         rows.push({
+          createdAt: typeof createdAt === 'string' ? createdAt : undefined,
           date,
           idempotencyKey,
           result: typeof result === 'string' ? result : undefined,
@@ -218,8 +220,10 @@ function buildDailyUsage(used: number): DailyAiUsage {
   };
 }
 
-function countCompletedAnalyses(rows: UsageRow[], date: string): number {
-  return rows.filter((row) => row.date === date && row.status === 'completed').length;
+function countCompletedAnalyses(rows: UsageRow[], date: string, resetAt: number | null): number {
+  return rows.filter((row) => row.date === date
+    && row.status === 'completed'
+    && (resetAt === null || wasCreatedOnOrAfter(row.createdAt, resetAt))).length;
 }
 
 function normaliseUsageStatus(value: unknown): UsageRow['status'] {
@@ -240,15 +244,36 @@ function parseUpdatedRowNumber(value: unknown): number | null {
   return Number.isSafeInteger(rowNumber) && rowNumber > 0 ? rowNumber : null;
 }
 
-function getSydneyDate(): string {
+function getSydneyDate(value = new Date()): string {
   const parts = new Intl.DateTimeFormat('en-AU', {
     day: '2-digit',
     month: '2-digit',
     timeZone: 'Australia/Sydney',
     year: 'numeric',
-  }).formatToParts();
+  }).formatToParts(value);
   const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${byType.year}-${byType.month}-${byType.day}`;
+}
+
+function getActiveUsageResetAt(environment: BackendEnvironment, date: string): number | null {
+  const value = environment.AI_USAGE_RESET_AT;
+  if (!value) {
+    return null;
+  }
+
+  const resetAt = Date.parse(value);
+  if (!Number.isFinite(resetAt) || getSydneyDate(new Date(resetAt)) !== date) {
+    return null;
+  }
+  return resetAt;
+}
+
+function wasCreatedOnOrAfter(createdAt: string | undefined, resetAt: number): boolean {
+  if (!createdAt) {
+    return false;
+  }
+  const createdAtTimestamp = Date.parse(createdAt);
+  return Number.isFinite(createdAtTimestamp) && createdAtTimestamp >= resetAt;
 }
 
 async function getGoogleAccessToken(environment: BackendEnvironment): Promise<string> {

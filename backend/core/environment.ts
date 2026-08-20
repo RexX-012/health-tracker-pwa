@@ -1,5 +1,6 @@
 export type BackendEnvironment = {
   APP_ACCESS_TOKEN?: string;
+  AI_USAGE_RESET_AT?: string;
   GOOGLE_SERVICE_ACCOUNT_JSON?: string;
   GOOGLE_SHEET_ID?: string;
   OPENAI_API_KEY?: string;
