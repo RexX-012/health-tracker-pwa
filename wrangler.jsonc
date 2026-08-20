@@ -1,10 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "health-tracker-api",
-  "main": "workers/index.ts",
-  "compatibility_date": "2026-08-17",
-  "triggers": {
-    "crons": ["* * * * *"]
-  },
-  "workers_dev": true
+  "name": "health-tracker-pwa",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-08-20"
 }
